@@ -9,3 +9,8 @@ MIT licensed; part of the [Legion tool spikes](https://github.com/ivanserbanuk20
 Audit counts and gas totals use unique `(chainId, transactionHash)` receipts.
 Exact duplicates are reported; conflicting duplicates fail. Failed transactions still use gas.
 Gas units are not fees, value transfers or profit; extra RPC receipt fields are ignored.
+
+Install with `python -m pip install .`, then run
+`receipt-auditor --input data/sample-receipts.jsonl --chain-id 56 --status failed`.
+The default output is JSON. Filters apply before duplicate auditing.
+Input errors exit 2 without a partial report. No RPC or account credentials are used.

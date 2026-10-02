@@ -1,5 +1,8 @@
 import json
 import unittest
+import os
+import subprocess
+import sys
 
 from receipt_auditor import audit, parser
 
@@ -41,3 +44,21 @@ class AuditTests(unittest.TestCase):
         text = json.dumps(record()) + "\n" + json.dumps(record(status="0x0"))
         with self.assertRaisesRegex(ValueError, "conflicting"):
             audit.summarise(parser.parse_receipts(text))
+
+
+class CliTests(unittest.TestCase):
+    def run_cli(self, *args):
+        return subprocess.run([sys.executable, "-m", "receipt_auditor.cli", *args],
+                              env=os.environ, text=True, capture_output=True)
+
+    def test_filters_saved_sample_and_emits_json(self):
+        result = self.run_cli("--input", "data/sample-receipts.jsonl", "--chain-id", "56", "--status", "failed")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["failed"], 1)
+        self.assertEqual(json.loads(result.stdout)["gas_used"], 42000)
+
+    def test_missing_file_and_bad_chain_fail_without_stdout(self):
+        for args in (("--input", "missing.jsonl"), ("--chain-id", "0")):
+            result = self.run_cli(*args)
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(result.stdout, "")
