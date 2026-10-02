@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from receipt_auditor import parser
+from receipt_auditor import audit, parser
 
 
 def record(**changes):
@@ -25,3 +25,19 @@ class ParserTests(unittest.TestCase):
         for bad in ("[]", "null", "broken"):
             with self.assertRaisesRegex(ValueError, "line 1"):
                 parser.parse_receipts(bad)
+
+
+class AuditTests(unittest.TestCase):
+    def test_counts_unique_receipts_with_chain_scoped_duplicates(self):
+        text = "\n".join(json.dumps(row) for row in [record(), record(),
+               record(chainId=1), record(transactionHash="0x" + "b" * 64, status="0x0")])
+        self.assertEqual(audit.summarise(parser.parse_receipts(text)), {
+            "records": 4, "unique": 3, "duplicates": 1,
+            "succeeded": 2, "failed": 1, "gas_used": 63000,
+        })
+        self.assertEqual(audit.summarise([])["unique"], 0)
+
+    def test_conflicting_duplicates_are_rejected(self):
+        text = json.dumps(record()) + "\n" + json.dumps(record(status="0x0"))
+        with self.assertRaisesRegex(ValueError, "conflicting"):
+            audit.summarise(parser.parse_receipts(text))
