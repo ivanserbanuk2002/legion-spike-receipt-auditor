@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legion-spike-receipt-auditor"
+version = "0.1.0"
+description = "Offline summaries of saved EVM-style transaction receipts"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+receipt-auditor = "receipt_auditor.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
