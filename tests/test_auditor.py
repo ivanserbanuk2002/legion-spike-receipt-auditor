@@ -99,3 +99,52 @@ class CliTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 2)
                 self.assertEqual(result.stdout, "")
                 self.assertNotIn("Traceback", result.stderr)
+
+    def test_grouped_reports_count_duplicates_within_each_chain(self):
+        text = "\n".join(json.dumps(row) for row in [record(), record(),
+                        record(chainId=1, status="0x0", gasUsed="0xa410")])
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "receipts.jsonl.gz"
+            source.write_bytes(gzip.compress(text.encode("utf-8")))
+            result = self.run_cli("--input", str(source), "--group-by", "chain")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout), {
+                "1": {"records": 1, "unique": 1, "duplicates": 0,
+                      "succeeded": 0, "failed": 1, "gas_used": 42000},
+                "56": {"records": 2, "unique": 1, "duplicates": 1,
+                       "succeeded": 1, "failed": 0, "gas_used": 21000},
+            })
+            result = self.run_cli("--input", str(source), "--group-by", "chain", "--format", "csv")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), [
+                "chain_id,records,unique,duplicates,succeeded,failed,gas_used",
+                "1,1,1,0,0,1,42000", "56,2,1,1,1,0,21000"])
+
+    def test_grouped_filters_apply_before_conflicting_duplicate_audit(self):
+        cases = [
+            ([record(), record(chainId=1), record(chainId=1, gasUsed="0x1")],
+             ("--chain-id", "56")),
+            ([record(), record(status="0x0")], ("--status", "succeeded")),
+        ]
+        for rows, filters in cases:
+            with self.subTest(filters=filters), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory) / "receipts.jsonl"
+                source.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+                result = self.run_cli("--input", str(source), "--group-by", "chain", *filters)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout), {
+                    "56": {"records": 1, "unique": 1, "duplicates": 0,
+                           "succeeded": 1, "failed": 0, "gas_used": 21000}})
+                conflict = self.run_cli("--input", str(source), "--group-by", "chain")
+                self.assertEqual(conflict.returncode, 2)
+                self.assertEqual(conflict.stdout, "")
+                self.assertIn("conflicting duplicate", conflict.stderr)
+
+    def test_empty_grouped_selection_has_no_rows(self):
+        for report_format, expected in (("json", "{}\n"),
+                ("csv", "chain_id,records,unique,duplicates,succeeded,failed,gas_used\n")):
+            with self.subTest(report_format=report_format):
+                result = self.run_cli("--group-by", "chain", "--chain-id", "999",
+                                      "--format", report_format)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, expected)

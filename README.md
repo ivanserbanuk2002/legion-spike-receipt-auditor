@@ -22,6 +22,14 @@ Other paths use plain UTF-8 JSONL. Invalid gzip data or UTF-8 exits 2.
 `--format csv` prints the same numeric summary as a header and one CSV row.
 An empty filtered selection yields zero counts, not a missing report.
 
+`receipt-auditor --input receipts.jsonl.gz --group-by chain` produces one
+summary per chain, keyed by chain-ID strings in JSON. Add `--format csv` for
+rows with `chain_id` followed by the same summary columns, in ascending chain
+order. `--chain-id` and `--status` filters apply before grouping and auditing;
+duplicates and conflicts stay scoped to each chain. An empty grouped selection
+produces `{}` in JSON or only the CSV header. Omitting `--group-by` keeps the
+flat summary.
+
 ## Development
 
 `python -m unittest discover -s tests -v` runs offline tests. CI tests Python 3.12

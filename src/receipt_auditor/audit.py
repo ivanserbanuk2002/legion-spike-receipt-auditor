@@ -17,3 +17,10 @@ def summarise(receipts: list[Receipt]) -> dict[str, int]:
         result["succeeded" if receipt.status else "failed"] += 1
         result["gas_used"] += receipt.gas_used
     return result
+
+
+def summarise_by_chain(receipts: list[Receipt]) -> dict[str, dict[str, int]]:
+    groups: dict[int, list[Receipt]] = {}
+    for receipt in receipts:
+        groups.setdefault(receipt.chain_id, []).append(receipt)
+    return {str(chain): summarise(groups[chain]) for chain in sorted(groups)}
