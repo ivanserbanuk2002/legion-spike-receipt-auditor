@@ -3,6 +3,9 @@ import unittest
 import os
 import subprocess
 import sys
+import gzip
+import tempfile
+from pathlib import Path
 
 from receipt_auditor import audit, parser
 
@@ -69,3 +72,30 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.splitlines(), [
             "records,unique,duplicates,succeeded,failed,gas_used", "0,0,0,0,0,0"])
+
+    def test_gzip_input_matches_plain_jsonl_with_filters(self):
+        text = "\n".join(json.dumps(row) for row in [record(), record(),
+                        record(chainId=1, status="0x0")])
+        with tempfile.TemporaryDirectory() as directory:
+            plain = Path(directory) / "receipts.jsonl"
+            compressed = Path(directory) / "receipts.jsonl.gz"
+            plain.write_text(text, encoding="utf-8")
+            compressed.write_bytes(gzip.compress(text.encode("utf-8")))
+            for report_format in ("json", "csv"):
+                args = ("--chain-id", "56", "--format", report_format)
+                expected = self.run_cli("--input", str(plain), *args)
+                result = self.run_cli("--input", str(compressed), *args)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, expected.stdout)
+
+    def test_invalid_gzip_and_utf8_exit_two_without_partial_report(self):
+        valid = gzip.compress(json.dumps(record()).encode("utf-8"))
+        for content in (b"not gzip", valid[:-4], gzip.compress(b"\xff"),
+                        b"\x1f\x8b\x08\x00" + b"\x00" * 6 + b"\x06" + b"\x00" * 8):
+            with self.subTest(content=content), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory) / "invalid.jsonl.gz"
+                source.write_bytes(content)
+                result = self.run_cli("--input", str(source))
+                self.assertEqual(result.returncode, 2)
+                self.assertEqual(result.stdout, "")
+                self.assertNotIn("Traceback", result.stderr)

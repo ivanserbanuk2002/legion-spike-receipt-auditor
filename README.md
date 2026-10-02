@@ -15,6 +15,10 @@ Install with `python -m pip install .`, then run
 The default output is JSON. Filters apply before duplicate auditing.
 Input errors exit 2 without a partial report. No RPC or account credentials are used.
 
+Files ending in `.gz` are read as gzip-compressed UTF-8 JSONL using Python's
+standard library, for example `receipt-auditor --input receipts.jsonl.gz`.
+Other paths use plain UTF-8 JSONL. Invalid gzip data or UTF-8 exits 2.
+
 `--format csv` prints the same numeric summary as a header and one CSV row.
 An empty filtered selection yields zero counts, not a missing report.
 
