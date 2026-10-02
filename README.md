@@ -14,3 +14,6 @@ Install with `python -m pip install .`, then run
 `receipt-auditor --input data/sample-receipts.jsonl --chain-id 56 --status failed`.
 The default output is JSON. Filters apply before duplicate auditing.
 Input errors exit 2 without a partial report. No RPC or account credentials are used.
+
+`--format csv` prints the same numeric summary as a header and one CSV row.
+An empty filtered selection yields zero counts, not a missing report.

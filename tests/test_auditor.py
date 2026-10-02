@@ -62,3 +62,10 @@ class CliTests(unittest.TestCase):
             result = self.run_cli(*args)
             self.assertEqual(result.returncode, 2)
             self.assertEqual(result.stdout, "")
+
+
+    def test_csv_summary_has_stable_columns_and_empty_filter(self):
+        result = self.run_cli("--format", "csv", "--chain-id", "999")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.splitlines(), [
+            "records,unique,duplicates,succeeded,failed,gas_used", "0,0,0,0,0,0"])
