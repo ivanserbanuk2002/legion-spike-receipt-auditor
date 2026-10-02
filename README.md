@@ -17,3 +17,9 @@ Input errors exit 2 without a partial report. No RPC or account credentials are 
 
 `--format csv` prints the same numeric summary as a header and one CSV row.
 An empty filtered selection yields zero counts, not a missing report.
+
+## Development
+
+`python -m unittest discover -s tests -v` runs offline tests. CI tests Python 3.12
+on pushes and pull requests. See [CONTRIBUTING](CONTRIBUTING.md).
+Status: working offline spike; no protocol-log decoding or confirmation checks.
